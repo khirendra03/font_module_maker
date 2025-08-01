@@ -1,0 +1,5 @@
+fontTools
+fontpreview
+patool
+pyunpack
+py7zr
