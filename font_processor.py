@@ -1,9 +1,7 @@
-
 import fnmatch
 import os
 import shutil
 from pyunpack import Archive
-from py7zr import unpack_7zarchive
 from fontTools import ttLib
 from fontpreview import FontBanner, FontWall, FontPage
 
@@ -20,8 +18,6 @@ TEMPLATE = {
     "all_fonts": ["Regular.ttf","Light.ttf","ExtraLight.ttf","SemiBold.ttf","Medium.ttf","Black.ttf","Bold.ttf","BlackItalic.ttf","BoldItalic.ttf","ExtraLightItalic.ttf","ThinItalic.ttf","Thin.ttf", "SemiBoldItalic.ttf","MediumItalic.ttf","Italic.ttf","LightItalic.ttf","ExtraBold.ttf","ExtraBoldItalic.ttf",'Condensed-Regular.ttf', 'Condensed-Light.ttf', 'Condensed-ExtraLight.ttf', 'Condensed-SemiBold.ttf', 'Condensed-Medium.ttf', 'Condensed-Black.ttf', 'Condensed-Bold.ttf', 'Condensed-BlackItalic.ttf', 'Condensed-BoldItalic.ttf', 'Condensed-ExtraLightItalic.ttf', 'Condensed-ThinItalic.ttf', 'Condensed-Thin.ttf', 'Condensed-SemiBoldItalic.ttf', 'Condensed-MediumItalic.ttf', 'Condensed-Italic.ttf', 'Condensed-LightItalic.ttf', 'Condensed-ExtraBold.ttf', 'Condensed-ExtraBoldItalic.ttf'],
     "single_file": ["Regular.ttf"]
 }
-    
-    print(f"Updated module.prop for '{fname}'")
 
 
 def process_fonts_in_dir(fontdir):
@@ -62,7 +58,6 @@ def generate_preview(font_path):
         return
 
     print(f"Generating preview for {os.path.basename(font_path)}...")
-    clear_temp_folders()
     
     filename = os.path.basename(font_path)
     preview_img_path = os.path.join("preview", remove_ext(filename) + ".png")
@@ -205,10 +200,12 @@ def remove_ext(file_with_ext):
     """Removes the extension from a filename."""
     return os.path.splitext(file_with_ext)[0]
 
+
 def create_dir(folder):
     """Creates a directory if it doesn't exist."""
     if not os.path.exists(folder):
         os.makedirs(folder)
+
 
 def wipe_files(path_to_folder):
     """Deletes all files and subdirectories in a folder."""
@@ -223,3 +220,63 @@ def wipe_files(path_to_folder):
                 shutil.rmtree(file_path)
         except Exception as e:
             print(f'Failed to delete {file_path}. Reason: {e}')
+
+def initialize():
+    """Initializes the script environment."""
+    print("Initializing...")
+    create_dir("output")
+    create_dir("preview")
+    create_dir("temp_font_dir")
+    wipe_files(TEMPLATE["fonts_dir"])
+    wipe_files("temp_font_dir")
+
+def clear_temp_folders():
+    """Clears temporary folders."""
+    print("Cleaning up temporary files...")
+    wipe_files("temp_font_dir")
+
+def create_module(font_path):
+    """Creates the Magisk font module."""
+    temp_font_dir = "temp_font_dir"
+    font_list = []
+
+    if font_path.lower().endswith(ZIP_EXT):
+        extract(font_path, temp_font_dir)
+        font_list = find("*.ttf", temp_font_dir)
+        if not font_list:
+            font_list = find("*.otf", temp_font_dir)
+    elif font_path.lower().endswith(FONT_EXT):
+        font_list = [font_path]
+    else:
+        print(f"Error: Unsupported file type for: {font_path}")
+        return
+
+    if not font_list:
+        print("Error: No font files found in the provided path.")
+        return
+
+    print(f"Found {len(font_list)} font file(s).")
+    flist = def_orig_flist(TEMPLATE["all_fonts"])
+    
+    for i, (style, _) in enumerate(flist):
+        found_font = find_font(font_list, style)
+        if found_font:
+            flist[i][1] = found_font
+
+    wipe_files(TEMPLATE["fonts_dir"])
+    paste_to_template(flist, TEMPLATE["fonts_dir"])
+
+    process_fonts_in_dir(TEMPLATE["fonts_dir"])
+
+    try:
+        font_family_name = short_name(ttLib.TTFont(font_list[0]))[1]
+        if not font_family_name or font_family_name.isspace():
+            font_family_name = remove_ext(os.path.basename(font_list[0]))
+    except Exception:
+        font_family_name = remove_ext(os.path.basename(font_list[0]))
+
+    output_filename_base = os.path.join("output", f"OMF_{font_family_name.replace(' ', '')}")
+    
+    print(f"\nPackaging module to: {output_filename_base}.zip")
+    shutil.make_archive(output_filename_base, 'zip', TEMPLATE["dir"])
+    print("\nModule created successfully!")

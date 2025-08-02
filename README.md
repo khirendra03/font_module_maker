@@ -2,16 +2,16 @@
 
 This script provides a fast and easy way to create flashable Magisk font modules directly from your command line. It is designed to be simple, interactive, and self-contained.
 
-You can package a single font file (`.ttf` or `.otf`) or a `.zip` archive containing multiple font styles into a module using either the OMF or MFFM template.
+You can package a single font file (`.ttf` or `.otf`) or a `.zip` archive containing multiple font styles into a module using the OMF template.
 
 ## Features
 
 *   **Interactive CLI:** A user-friendly command-line interface that guides you through every step.
-*   **Multiple File Types:** Supports single `.ttf` and `.otf` font files, as well as `.zip`, `.7z`, and `.rar` archives.
-*   **Two Popular Templates:** Choose between the OMF (Oh My Font) and MFFM (Magisk Font For Me) templates.
+*   **Multiple File Types:** Supports single `.ttf` and `.otf` font files, as well as `.zip` archives.
+*   **OMF Template:** Uses the OMF (Oh My Font) template.
 *   **Font Preview:** Generate a `.png` image preview for any single font file to see how it looks before creating the module.
 *   **Automatic Font Mapping:** When using a zip archive, the script intelligently maps different font weights (like Bold, Italic, Thin, etc.) to their correct places in the template.
-*   **Self-Contained:** The project includes the templates, so you don't need to download them separately.
+*   **Self-Contained:** The project includes the template, so you don't need to download it separately.
 
 ## Installation & Usage
 
@@ -46,8 +46,7 @@ The script will then ask you a series of questions:
 
 1.  **Enter Font Path:** Provide the full, absolute path to your font file or zip archive.
     *   *Tip:* You can often drag and drop the file directly onto your terminal window to paste the full path.
-2.  **Choose a Template:** Select whether you want to use the `OMF` or `MFFM` template for your module.
-3.  **Generate a Preview:** Choose `y` (yes) if you want to create a `.png` preview image of your font. This is highly recommended for single font files.
+2.  **Generate a Preview:** Choose `y` (yes) if you want to create a `.png` preview image of your font. This is highly recommended for single font files.
     *   *Note:* Preview generation is currently only supported for single `.ttf` or `.otf` files, not for zip archives.
 
 After you answer the questions, the script will process the files and create your flashable Magisk module.
@@ -66,11 +65,6 @@ $ python make_module.py
 
 Enter the full path to your font file (.ttf, .otf) or zip archive: 
 > /home/user/Downloads/MyCoolFont-Regular.ttf
-
-Choose a template (1 for OMF, 2 for MFFM): 
-1. OMF (Recommended)
-2. MFFM
-> 1
 
 Do you want to generate a font preview image? (y/n): 
 > y
