@@ -4,6 +4,7 @@ import shutil
 import requests
 import zipfile
 import io
+import subprocess
 from pyunpack import Archive
 from fontTools import ttLib
 from fontpreview import FontBanner, FontWall, FontPage
@@ -59,10 +60,15 @@ def process_fonts_in_dir(fontdir):
             tt["hhea"].lineGap = 0
             tt["OS/2"].sTypoLineGap = 0
             
-            tt.save(font_path)
-            # print(f"  - Fixed metrics for: {os.path.basename(font_path)}")
+            try:
+                tt.save(font_path)
+                # print(f"  - Fixed metrics for: {os.path.basename(font_path)}")
+            except Exception as save_e:
+                print(f"Warning: Could not save font {os.path.basename(font_path)}. Reason: {save_e}")
+        except ttLib.TTLibError as e:
+            print(f"Warning: Could not open font {os.path.basename(font_path)}. It might be corrupted or an unsupported format. Reason: {e}")
         except Exception as e:
-            print(f"Warning: Could not process font {os.path.basename(font_path)}. Reason: {e}")
+            print(f"Warning: An unexpected error occurred while processing font {os.path.basename(font_path)}. Reason: {e}")
 
 
 def generate_preview(font_path):
@@ -77,21 +83,33 @@ def generate_preview(font_path):
     preview_img_path = os.path.join("preview", remove_ext(filename) + ".png")
 
     try:
-        font_name = short_name(ttLib.TTFont(font_path))[1] or "Font"
+        try:
+            font_tt = ttLib.TTFont(font_path)
+            font_name = short_name(font_tt)[1] or "Font"
+        except ttLib.TTLibError as e:
+            print(f"Error: Could not open font {os.path.basename(font_path)} for preview. It might be corrupted or an unsupported format. Reason: {e}")
+            return
+        except Exception as e:
+            print(f"Error: An unexpected error occurred while reading font {os.path.basename(font_path)} for preview. Reason: {e}")
+            return
         
-        fb = FontBanner(font_path, 'landscape')
-        fb.font_text = f'{font_name}\nAa Bb Cc Dd Ee Ff Gg\n1234567890'
-        fb.bg_color = (20, 20, 20)
-        fb.fg_color = (230, 230, 230)
-        fb.set_font_size(80)
-        fb.set_text_position('center')
-        
-        fw = FontWall([fb], 1, mode="horizontal")
-        fw.draw(1)
-        fw.save(preview_img_path)
-        print(f"Preview saved to: {preview_img_path}")
+        try:
+            fb = FontBanner(font_path, 'landscape')
+            fb.font_text = f'{font_name}\nAa Bb Cc Dd Ee Ff Gg\n1234567890'
+            fb.bg_color = (20, 20, 20)
+            fb.fg_color = (230, 230, 230)
+            fb.set_font_size(80)
+            fb.set_text_position('center')
+            
+            fw = FontWall([fb], 1, mode="horizontal")
+            fw.draw(1)
+            fw.save(preview_img_path)
+            print(f"Preview saved to: {preview_img_path}")
+        except Exception as e:
+            print(f"Error generating preview image for {os.path.basename(font_path)}: {e}")
+            print("Please ensure 'fontpreview' library is correctly installed and has all its dependencies.")
     except Exception as e:
-        print(f"Error generating preview: {e}")
+        print(f"An unexpected error occurred during preview generation: {e}")
 
 
 # --- Utility Functions ---
@@ -105,8 +123,12 @@ def extract(file, location):
             shutil.unpack_archive(file, location)
         else:
             Archive(file).extractall(location)
+        print("Extraction successful.")
+        return True
     except Exception as e:
-        print(f"Error during extraction: {e}")
+        print(f"Error during extraction of {os.path.basename(file)}: {e}")
+        print("Please ensure the archive is not corrupted and that you have the necessary tools (e.g., 7zip) installed if it's a .7z file.")
+        return False
 
 
 def find(pattern, path):
@@ -120,66 +142,91 @@ def find(pattern, path):
 
 
 def find_font(font_list, style):
-    """Finds a specific font style from a list of font files based on OMF naming conventions."""
-    style_base = remove_ext(style).lower() # e.g., 'ur' from 'ur.ttf'
+    """
+    Finds a specific font style from a list of font files based on OMF naming conventions.
+    It tries to match fonts using several strategies:
+    1. Exact match with OMF short name (e.g., 'ur.ttf' matches 'ur').
+    2. Partial match with OMF short name within the filename (e.g., 'MyFont-ur.ttf' matches 'ur').
+    3. Match with common style names (e.g., 'Regular' for 'ur') using a predefined map.
+    4. Fallback to font metadata (full font name, family name, and style names).
+    5. As a last resort for 'ur' (Regular), it returns the first available font.
+    """
+    style_base = remove_ext(style).lower()  # e.g., 'ur' from 'ur.ttf'
 
-    # 1. Exact match with OMF short name (e.g., 'ur.ttf' matches 'ur')
-    for font_path in font_list:
-        font_filename_base = remove_ext(os.path.basename(font_path)).lower()
-        if font_filename_base == style_base:
-            return font_path
-
-    # 2. Partial match with OMF short name (e.g., 'MyFont-ur.ttf' matches 'ur')
-    for font_path in font_list:
-        font_filename_base = remove_ext(os.path.basename(font_path)).lower()
-        if style_base in font_filename_base.replace("-", "").replace("_", ""):
-            return font_path
-
-    # 3. Match with common style names (e.g., 'Regular' for 'ur')
-    # This part needs to be more sophisticated, mapping OMF short names to common names
-    # For now, a simplified version:
+    # Predefined mapping for common style names to OMF short names
     common_names_map = {
-        "ur": ["regular", "book"], "ir": ["italic"],
+        "ur": ["regular", "book", "roman"], "ir": ["italic", "oblique"],
         "ub": ["bold"], "ib": ["bolditalic"],
         "ut": ["thin"], "it": ["thinitalic"],
         "ul": ["light"], "il": ["lightitalic"],
         "um": ["medium"], "im": ["mediumitalic"],
-        "usb": ["semibold"], "isb": ["semibolditalic"],
-        "ueb": ["extrabold"], "ieb": ["extrabolditalic"],
-        "ubl": ["black"], "ibl": ["blackitalic"],
-        # Add more mappings as needed for condensed, mono, serif, serif-mono
+        "usb": ["semibold", "demibold"], "isb": ["semibolditalic", "demibolditalic"],
+        "ueb": ["extrabold", "ultrabold"], "ieb": ["extrabolditalic", "ultrabolditalic"],
+        "ubl": ["black", "heavy"], "ibl": ["blackitalic", "heavyitalic"],
+        "ucl": ["condensedlight"], "icl": ["condensedlightitalic"],
+        "ucr": ["condensedregular"], "icr": ["condenseditalic"],
+        "ucb": ["condensedbold"], "icb": ["condensedbolditalic"],
+        "ucbl": ["condensedblack"], "icbl": ["condensedblackitalic"],
+        "uml": ["monolight"], "iml": ["monolightitalic"],
+        "umr": ["monoregular"], "imr": ["monoitalic"],
+        "umb": ["monobold"], "imb": ["monobolditalic"],
+        "umbl": ["monoblack"], "imbl": ["monoblackitalic"],
+        "sfr": ["serifregular"], "sfi": ["serifitalic"],
+        "sfb": ["serifbold"], "sfbi": ["serifbolditalic"],
+        "sfbl": ["serifblack"], "sfbl": ["serifblackitalic"],
+        "smr": ["serifmonoregular"], "smi": ["serifmonoitalic"],
+        "smb": ["serifmonobold"], "smbi": ["serifmonobolditalic"],
     }
 
+    # Helper to normalize font filenames for matching
+    def normalize_filename(filename):
+        return remove_ext(filename).lower().replace("-", "").replace("_", "")
+
+    # Strategy 1: Exact match with OMF short name (e.g., 'ur.ttf' matches 'ur')
+    for font_path in font_list:
+        if normalize_filename(os.path.basename(font_path)) == style_base:
+            return font_path
+
+    # Strategy 2: Partial match with OMF short name within the filename
+    for font_path in font_list:
+        if style_base in normalize_filename(os.path.basename(font_path)):
+            return font_path
+
+    # Strategy 3: Match with common style names
     if style_base in common_names_map:
         for common_name in common_names_map[style_base]:
             for font_path in font_list:
-                font_filename_base = remove_ext(os.path.basename(font_path)).lower()
-                if common_name in font_filename_base.replace("-", "").replace("_", ""):
+                if common_name in normalize_filename(os.path.basename(font_path)):
                     return font_path
 
-    # 4. Fallback to font metadata (full font name, family name)
+    # Strategy 4: Fallback to font metadata (full font name, family name, and style names)
     for font_path in font_list:
         try:
             font = ttLib.TTFont(font_path)
-            full_name = short_name(font)[0].lower() # Full font name
-            family_name = short_name(font)[1].lower() # Font family name
-
-            if style_base in full_name or style_base in family_name:
-                return font_path
+            # NameID 4: Full font name
+            # NameID 1: Font family name
+            # NameID 2: Font Subfamily name (e.g., "Regular", "Bold Italic")
+            font_names = [
+                record.string.decode('utf-16-be') if b'\x00' in record.string else record.string.decode('latin-1')
+                for record in font['name'].names
+                if record.nameID in [1, 2, 4]
+            ]
             
-            # More specific metadata checks can be added here if needed
-            # e.g., checking specific name IDs for style information
+            for name_str in font_names:
+                if style_base in name_str.lower().replace(" ", ""):
+                    return font_path
+        except ttLib.TTLibError as e:
+            print(f"Warning: Could not read font metadata for {os.path.basename(font_path)}. It might be corrupted or an unsupported format. Reason: {e}")
+            continue
         except Exception as e:
-            print(f"Warning: Could not read font metadata for {os.path.basename(font_path)}. Reason: {e}")
+            print(f"Warning: An unexpected error occurred while reading font metadata for {os.path.basename(font_path)}. Reason: {e}")
             continue
 
-    # If no specific match, and it's a 'regular' style, try to find a generic regular font
-    if style_base == "ur": # 'ur' is the OMF short name for sans-serif Regular
+    # Strategy 5: As a last resort for 'ur' (Regular), return the first available font
+    if style_base == "ur":
         for font_path in font_list:
-            font_filename_base = remove_ext(os.path.basename(font_path)).lower()
-            if "regular" in font_filename_base or "book" in font_filename_base:
+            if "regular" in normalize_filename(os.path.basename(font_path)) or "book" in normalize_filename(os.path.basename(font_path)):
                 return font_path
-        # As a last resort for 'ur', return the first font if no 'regular' or 'book' is found
         if font_list:
             return font_list[0]
 
@@ -214,9 +261,13 @@ def paste_to_template(flist, dest_dir):
     for font_style, font_path in flist:
         if font_path:
             dest_path = os.path.join(dest_dir, font_style + ".ttf")
-            if os.path.exists(font_path):
-                shutil.copy(font_path, dest_path)
-                # print(f"  - Copied {os.path.basename(font_path)} to {os.path.basename(dest_path)}")
+            try:
+                if os.path.exists(font_path):
+                    shutil.copy(font_path, dest_path)
+                    # print(f"  - Copied {os.path.basename(font_path)} to {os.path.basename(dest_path)}")
+            except IOError as e:
+                print(f"Error copying {os.path.basename(font_path)} to {os.path.basename(dest_path)}: {e}")
+                raise Exception(f"Failed to copy font file: {os.path.basename(font_path)}")
 
     # Fill missing fonts with regular
     regular_font_path = return_font(flist, "ur")
@@ -231,8 +282,12 @@ def paste_to_template(flist, dest_dir):
         for font_style, font_path in flist:
             if not font_path:
                 dest_path = os.path.join(dest_dir, font_style + ".ttf")
-                shutil.copy(regular_font_path, dest_path)
-                # print(f"  - Filled missing {font_style} with {os.path.basename(regular_font_path)}")
+                try:
+                    shutil.copy(regular_font_path, dest_path)
+                    # print(f"  - Filled missing {font_style} with {os.path.basename(regular_font_path)}")
+                except IOError as e:
+                    print(f"Error copying {os.path.basename(regular_font_path)} to {os.path.basename(dest_path)}: {e}")
+                    raise Exception(f"Failed to fill missing font: {os.path.basename(regular_font_path)}")
 
 
 def def_orig_flist(all_fonts):
@@ -319,7 +374,11 @@ def check_and_update_omf_template():
 
             # Clone the repository and copy new template
             print(f"Cloning omftemplate to {temp_clone_dir}...")
-            os.system(f"git clone https://gitlab.com/nongthaihoang/omftemplate.git {temp_clone_dir}")
+            try:
+                subprocess.run(['git', 'clone', 'https://gitlab.com/nongthaihoang/omftemplate.git', temp_clone_dir], check=True, capture_output=True, text=True)
+            except subprocess.CalledProcessError as e:
+                print(f"Error cloning repository: {e.stderr}")
+                return
             
             # Copy new template from cloned repo
             shutil.copytree(temp_clone_dir, TEMPLATE["dir"], dirs_exist_ok=True) # Use dirs_exist_ok for Python 3.8+
@@ -348,7 +407,8 @@ def create_module(font_path):
     font_list = []
 
     if font_path.lower().endswith(ZIP_EXT):
-        extract(font_path, temp_font_dir)
+        if not extract(font_path, temp_font_dir):
+            raise Exception("Failed to extract font archive.")
         font_list = find("*.ttf", temp_font_dir)
         if not font_list:
             font_list = find("*.otf", temp_font_dir)
@@ -384,6 +444,10 @@ def create_module(font_path):
 
     output_filename_base = os.path.join("output", f"OMF_{font_family_name.replace(' ', '')}")
     
-    print(f"\nPackaging module to: {output_filename_base}.zip")
-    shutil.make_archive(output_filename_base, 'zip', TEMPLATE["dir"])
-    print("\nModule created successfully!")
+    try:
+        print(f"\nPackaging module to: {output_filename_base}.zip")
+        shutil.make_archive(output_filename_base, 'zip', TEMPLATE["dir"])
+        print("\nModule created successfully!")
+    except Exception as e:
+        raise Exception(f"Failed to package module: {e}")
+    return font_list

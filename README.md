@@ -1,99 +1,57 @@
-# Interactive Font Module Script
+# Font Module Script
 
-This script provides a fast and easy way to create flashable Magisk font modules directly from your command line. It is designed to be simple, interactive, and self-contained.
+This script helps you create custom Magisk font modules easily.
 
-You can package a single font file (`.ttf` or `.otf`) or a `.zip` archive containing multiple font styles into a module using the OMF template.
+## Table of Contents
+- [Installation](#installation)
+- [How to Create Your Own Module](#how-to-create-your-own-module)
+- [FAQs & Troubleshooting](#faqs--troubleshooting)
+- [Supported Android Versions](#supported-android-versions)
+- [Safety Disclaimer](#safety-disclaimer)
 
-## Features
+## Installation
 
-*   **Interactive CLI:** A user-friendly command-line interface that guides you through every step.
-*   **Multiple File Types:** Supports single `.ttf` and `.otf` font files, as well as `.zip` archives.
-*   **OMF Template:** Uses the OMF (Oh My Font) template.
-*   **Font Preview:** Generate a `.png` image preview for any single font file to see how it looks before creating the module.
-*   **Automatic Font Mapping:** When using a zip archive, the script intelligently maps different font weights (like Bold, Italic, Thin, etc.) to their correct places in the template.
-*   **Self-Contained:** The project includes the template, so you don't need to download it separately.
+To use this script, follow these steps:
 
-## Installation & Usage
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-repo/font-script.git
+    cd font-script
+    ```
+    (Replace `https://github.com/your-repo/font-script.git` with the actual repository URL)
 
-### 1. Prerequisites
+2.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-*   Python 3.x
-*   Pip (Python package installer)
+## How to Create Your Own Module
 
-### 2. Installation
+1.  **Run the script:**
+    ```bash
+    python make_module.py
+    ```
 
-Clone or download the project, then navigate into the `font-script` directory and install the required Python libraries:
+2.  **Follow the prompts:** The script will guide you through the process, asking for:
+    *   The path to your font file (`.ttf`, `.otf`) or a `.zip` archive containing fonts.
+    *   Your preferred module template (OMF or MFFM).
+    *   Whether to generate a font preview image.
 
-```bash
-# Navigate to the project folder
-cd /path/to/font-script
+3.  **Module Output:** The final Magisk module `.zip` will be saved in the `output/` folder.
 
-# Install dependencies
-pip install -r requirements.txt
-```
+## FAQs & Troubleshooting
 
-### 3. Running the Script
+*   **Q: My module isn't applying. What should I do?**
+    *   A: Ensure your font files are valid. Check the Magisk logs for errors.
+*   **Q: Can I use multiple font files?**
+    *   A: Yes, you can provide a `.zip` file containing multiple font files. The script will process them accordingly.
 
-Once the dependencies are installed, run the main script:
+## Supported Android Versions
 
-```bash
-python make_module.py
-```
+This script aims to create modules compatible with Android 10 and above, leveraging Magisk's module system. Compatibility may vary based on specific ROMs and Magisk versions.
 
-### 4. The Process
+## Safety Disclaimer
 
-The script will then ask you a series of questions:
-
-1.  **Enter Font Path:** Provide the full, absolute path to your font file or zip archive.
-    *   *Tip:* You can often drag and drop the file directly onto your terminal window to paste the full path.
-2.  **Generate a Preview:** Choose `y` (yes) if you want to create a `.png` preview image of your font. This is highly recommended for single font files.
-    *   *Note:* Preview generation is currently only supported for single `.ttf` or `.otf` files, not for zip archives.
-
-After you answer the questions, the script will process the files and create your flashable Magisk module.
-
-### 5. Get Your Module
-
-The finished `.zip` module will be saved in the **`output`** directory. You can then transfer this file to your phone and flash it using Magisk Manager.
-
-## Usage Example
-
-Here is an example of a session to create a module from a single font file named `MyCoolFont-Regular.ttf`.
-
-```bash
-$ python make_module.py
---- Interactive Font Module Script ---
-
-Enter the full path to your font file (.ttf, .otf) or zip archive: 
-> /home/user/Downloads/MyCoolFont-Regular.ttf
-
-Do you want to generate a font preview image? (y/n): 
-> y
-
-Starting module creation with the 'OMF' template...
-Generating preview for MyCoolFont-Regular.ttf...
-Preview saved to: preview/MyCoolFont-Regular.png
-Processing single font: MyCoolFont-Regular.ttf
-Updated module.prop for 'MyCoolFont-Regular'
-
-Module 'MyCoolFont-Regular.zip' created successfully in the 'output' folder!
-Cleaning temporary folders...
-```
-
-This will create two files:
-*   `output/MyCoolFont-Regular.zip` (The flashable Magisk module)
-*   `preview/MyCoolFont-Regular.png` (The font preview image)
-
-## Project Structure
-
-```
-font-script/
-├── make_module.py      # The main interactive script you will run
-├── font_processor.py   # The core logic for processing fonts and zips
-├── requirements.txt    # A list of the required Python libraries
-├── README.md           # This file
-├── templates/          # Contains the module templates
-│   └── OMF/            # The Oh My Font template
-├── output/             # Where the final flashable modules are saved
-├── preview/            # Where generated font previews are saved
-└── temp_*/             # Temporary folders used during processing (can be ignored)
-```
+*   **Use at your own risk:** Modifying system fonts can lead to boot loops or system instability if not done correctly. Always have a backup of your device.
+*   **Magisk:** This script relies on Magisk for module installation. Ensure you have a working Magisk installation.
+*   **Font Licensing:** Respect font licenses when creating and distributing modules.
