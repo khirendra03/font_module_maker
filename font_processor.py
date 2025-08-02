@@ -18,7 +18,18 @@ ORIG_DIR = os.getcwd()
 TEMPLATE = {
     "dir": "templates/OMF",
     "fonts_dir": "templates/OMF/fonts",
-    "all_fonts": ["Regular.ttf","Light.ttf","ExtraLight.ttf","SemiBold.ttf","Medium.ttf","Black.ttf","Bold.ttf","BlackItalic.ttf","BoldItalic.ttf","ExtraLightItalic.ttf","ThinItalic.ttf","Thin.ttf", "SemiBoldItalic.ttf","MediumItalic.ttf","Italic.ttf","LightItalic.ttf","ExtraBold.ttf","ExtraBoldItalic.ttf",'Condensed-Regular.ttf', 'Condensed-Light.ttf', 'Condensed-ExtraLight.ttf', 'Condensed-SemiBold.ttf', 'Condensed-Medium.ttf', 'Condensed-Black.ttf', 'Condensed-Bold.ttf', 'Condensed-BlackItalic.ttf', 'Condensed-BoldItalic.ttf', 'Condensed-ExtraLightItalic.ttf', 'Condensed-ThinItalic.ttf', 'Condensed-Thin.ttf', 'Condensed-SemiBoldItalic.ttf', 'Condensed-MediumItalic.ttf', 'Condensed-Italic.ttf', 'Condensed-LightItalic.ttf', 'Condensed-ExtraBold.ttf', 'Condensed-ExtraBoldItalic.ttf'],
+    "all_fonts": [
+        "ubl.ttf", "ueb.ttf", "ub.ttf", "usb.ttf", "um.ttf", "ur.ttf", "ul.ttf", "uel.ttf", "ut.ttf",
+        "ibl.ttf", "ieb.ttf", "ib.ttf", "isb.ttf", "im.ttf", "ir.ttf", "il.ttf", "iel.ttf", "it.ttf",
+        "cbl.ttf", "ceb.ttf", "cb.ttf", "csb.ttf", "cm.ttf", "cr.ttf", "cl.ttf", "cel.ttf", "ct.ttf",
+        "dbl.ttf", "deb.ttf", "db.ttf", "dsb.ttf", "dm.ttf", "dr.ttf", "dl.ttf", "del.ttf", "dt.ttf",
+        "mbl.ttf", "meb.ttf", "mb.ttf", "msb.ttf", "mm.ttf", "mr.ttf", "ml.ttf", "mel.ttf", "mt.ttf",
+        "nbl.ttf", "neb.ttf", "nb.ttf", "nsb.ttf", "nm.ttf", "nr.ttf", "nl.ttf", "nel.ttf", "nt.ttf",
+        "sbl.ttf", "seb.ttf", "sb.ttf", "ssb.ttf", "sm.ttf", "sr.ttf", "sl.ttf", "sel.ttf", "st.ttf",
+        "tbl.ttf", "teb.ttf", "tb.ttf", "tsb.ttf", "tm.ttf", "tr.ttf", "tl.ttf", "tel.ttf", "tt.ttf",
+        "obl.ttf", "oeb.ttf", "ob.ttf", "osb.ttf", "om.ttf", "or.ttf", "ol.ttf", "oel.ttf", "ot.ttf",
+        "pbl.ttf", "peb.ttf", "pb.ttf", "psb.ttf", "pm.ttf", "pr.ttf", "pl.ttf", "pel.ttf", "pt.ttf"
+    ],
     "single_file": ["Regular.ttf"]
 }
 
@@ -108,33 +119,69 @@ def find(pattern, path):
     return result
 
 
-def find_font(font_list, style, filename=""):
-    """Finds a specific font style from a list of font files."""
-    # This is a simplified version of the original find_font logic
-    style = style.lower()
-    
-    # First pass: strict filename matching
+def find_font(font_list, style):
+    """Finds a specific font style from a list of font files based on OMF naming conventions."""
+    style_base = remove_ext(style).lower() # e.g., 'ur' from 'ur.ttf'
+
+    # 1. Exact match with OMF short name (e.g., 'ur.ttf' matches 'ur')
     for font_path in font_list:
-        font_filename = remove_ext(os.path.basename(font_path)).lower()
-        if style in font_filename.replace("-", "").replace("_", ""):
+        font_filename_base = remove_ext(os.path.basename(font_path)).lower()
+        if font_filename_base == style_base:
             return font_path
 
-    # Second pass: check font metadata
+    # 2. Partial match with OMF short name (e.g., 'MyFont-ur.ttf' matches 'ur')
+    for font_path in font_list:
+        font_filename_base = remove_ext(os.path.basename(font_path)).lower()
+        if style_base in font_filename_base.replace("-", "").replace("_", ""):
+            return font_path
+
+    # 3. Match with common style names (e.g., 'Regular' for 'ur')
+    # This part needs to be more sophisticated, mapping OMF short names to common names
+    # For now, a simplified version:
+    common_names_map = {
+        "ur": ["regular", "book"], "ir": ["italic"],
+        "ub": ["bold"], "ib": ["bolditalic"],
+        "ut": ["thin"], "it": ["thinitalic"],
+        "ul": ["light"], "il": ["lightitalic"],
+        "um": ["medium"], "im": ["mediumitalic"],
+        "usb": ["semibold"], "isb": ["semibolditalic"],
+        "ueb": ["extrabold"], "ieb": ["extrabolditalic"],
+        "ubl": ["black"], "ibl": ["blackitalic"],
+        # Add more mappings as needed for condensed, mono, serif, serif-mono
+    }
+
+    if style_base in common_names_map:
+        for common_name in common_names_map[style_base]:
+            for font_path in font_list:
+                font_filename_base = remove_ext(os.path.basename(font_path)).lower()
+                if common_name in font_filename_base.replace("-", "").replace("_", ""):
+                    return font_path
+
+    # 4. Fallback to font metadata (full font name, family name)
     for font_path in font_list:
         try:
-            font_name = short_name(ttLib.TTFont(font_path))[0].lower()
-            if style in font_name:
+            font = ttLib.TTFont(font_path)
+            full_name = short_name(font)[0].lower() # Full font name
+            family_name = short_name(font)[1].lower() # Font family name
+
+            if style_base in full_name or style_base in family_name:
                 return font_path
-        except:
-            continue
             
-    # Fallback for regular
-    if style == "regular":
+            # More specific metadata checks can be added here if needed
+            # e.g., checking specific name IDs for style information
+        except Exception as e:
+            print(f"Warning: Could not read font metadata for {os.path.basename(font_path)}. Reason: {e}")
+            continue
+
+    # If no specific match, and it's a 'regular' style, try to find a generic regular font
+    if style_base == "ur": # 'ur' is the OMF short name for sans-serif Regular
         for font_path in font_list:
-            font_filename = remove_ext(os.path.basename(font_path)).lower()
-            if "regular" in font_filename or "book" in font_filename:
-                 return font_path
-        return font_list[0] # Return the first font as a last resort
+            font_filename_base = remove_ext(os.path.basename(font_path)).lower()
+            if "regular" in font_filename_base or "book" in font_filename_base:
+                return font_path
+        # As a last resort for 'ur', return the first font if no 'regular' or 'book' is found
+        if font_list:
+            return font_list[0]
 
     return None
 
@@ -172,7 +219,7 @@ def paste_to_template(flist, dest_dir):
                 # print(f"  - Copied {os.path.basename(font_path)} to {os.path.basename(dest_path)}")
 
     # Fill missing fonts with regular
-    regular_font_path = return_font(flist, "Regular")
+    regular_font_path = return_font(flist, "ur")
     if not regular_font_path:
         # If no regular, use the first available font
         for _, fp in flist:
