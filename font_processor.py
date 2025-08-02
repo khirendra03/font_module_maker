@@ -5,9 +5,29 @@ import requests
 import zipfile
 import io
 import subprocess
+import json
 from pyunpack import Archive
 from fontTools import ttLib
 from fontpreview import FontBanner, FontWall, FontPage
+
+def get_module_version(module_prop_path):
+    """
+    Extracts the version from the module.prop file.
+
+    Args:
+        module_prop_path (str): The path to the module.prop file.
+
+    Returns:
+        str: The version string if found, otherwise an empty string.
+    """
+    version = ""
+    if os.path.exists(module_prop_path):
+        with open(module_prop_path, "r") as f:
+            for line in f:
+                if line.startswith("version="):
+                    version = line.split("=")[1].strip()
+                    break
+    return version
 
 def is_variable_font(font_path):
     """
@@ -645,6 +665,25 @@ def create_module(font_path):
         print(f"\nPackaging module to: {output_filename_base}.zip")
         shutil.make_archive(output_filename_base, 'zip', TEMPLATE["dir"])
         print("\nModule created successfully!")
+
+        # Create changelog.md
+        changelog_path = f"{output_filename_base}_changelog.md"
+        with open(changelog_path, "w") as f:
+            f.write("# Changelog\n\n- Initial release\n")
+
+        # Create update.json
+        module_prop_path = os.path.join(TEMPLATE["dir"], "module.prop")
+        version = get_module_version(module_prop_path)
+        update_json_path = f"{output_filename_base}_update.json"
+        update_data = {
+            "version": version,
+            "versionCode": int(version.replace(".", "")),
+            "zipUrl": f"https://github.com/your-repo/releases/download/{version}/{os.path.basename(output_filename_base)}.zip",
+            "changelog": "https://raw.githubusercontent.com/your-repo/master/changelog.md"
+        }
+        with open(update_json_path, "w") as f:
+            json.dump(update_data, f, indent=4)
+
     except Exception as e:
         raise Exception(f"Failed to package module: {e}")
     
