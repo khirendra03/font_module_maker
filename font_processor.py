@@ -29,6 +29,34 @@ def get_module_version(module_prop_path):
                     break
     return version
 
+def get_variable_font_axes(font_path):
+    """
+    Extracts the axes and their value ranges from a variable font.
+
+    Args:
+        font_path (str): The path to the variable font file.
+
+    Returns:
+        dict: A dictionary where keys are axis tags (e.g., 'wght') and
+              values are another dictionary with 'min', 'max', and 'default' values.
+    """
+    try:
+        font = ttLib.TTFont(font_path)
+        if 'fvar' not in font:
+            return None
+
+        axes = {}
+        for axis in font['fvar'].axes:
+            axes[axis.axisTag] = {
+                'min': axis.minValue,
+                'max': axis.maxValue,
+                'default': axis.defaultValue
+            }
+        return axes
+    except Exception as e:
+        print(f"Error reading variable font axes: {e}")
+        return None
+
 def is_variable_font(font_path):
     """
     Checks if a font is a variable font by inspecting its tables using ttx.
@@ -618,13 +646,29 @@ def create_module(font_path):
         # For variable fonts, copy the font to the fonts directory
         # and create a config.cfg file
         wipe_files(TEMPLATE["fonts_dir"])
-        shutil.copy(font_list[0], TEMPLATE["fonts_dir"])
-        
+        shutil.copy(font_list[0], os.path.join(TEMPLATE["fonts_dir"], os.path.basename(font_list[0])))
+
+        # Get font family name
+        font_family_name = short_name(ttLib.TTFont(font_list[0]))[1]
+        if not font_family_name or font_family_name.isspace():
+            font_family_name = remove_ext(os.path.basename(font_list[0]))
+
         # Create config.cfg
         config_path = os.path.join(TEMPLATE["dir"], "config.cfg")
+        axes = get_variable_font_axes(font_list[0])
         with open(config_path, "w") as f:
             f.write("LSC=true\n")
             f.write("OTL=tnum,ss01,ss02,ss03,ss04,ss05,ss06,ss07,ss08,ss09,ss10,ss11,ss12,ss13,ss14,ss15,ss16,ss17,ss18,ss19,ss20,calt,case,dlig,frac,hlig,kern,liga,lnum,onum,ordn,pnum,salt,smcp,sups,tnum,zero\n")
+            if axes and 'wght' in axes:
+                f.write(f"UT = wght {axes['wght']['min']}\n")
+                f.write(f"UL = wght {max(axes['wght']['min'], 300)}\n")
+                f.write(f"UR = wght {max(axes['wght']['min'], 400)}\n")
+                f.write(f"UM = wght {max(axes['wght']['min'], 500)}\n")
+                f.write(f"USB = wght {max(axes['wght']['min'], 600)}\n")
+                f.write(f"UB = wght {max(axes['wght']['min'], 700)}\n")
+                f.write(f"UEB = wght {min(axes['wght']['max'], 800)}\n")
+                f.write(f"UBL = wght {min(axes['wght']['max'], 900)}\n")
+            f.write(f"\n### {font_family_name}\n")
 
     else:
         print("Static font detected.")
