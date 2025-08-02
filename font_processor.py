@@ -660,14 +660,22 @@ def create_module(font_path):
             f.write("LSC=true\n")
             f.write("OTL=tnum,ss01,ss02,ss03,ss04,ss05,ss06,ss07,ss08,ss09,ss10,ss11,ss12,ss13,ss14,ss15,ss16,ss17,ss18,ss19,ss20,calt,case,dlig,frac,hlig,kern,liga,lnum,onum,ordn,pnum,salt,smcp,sups,tnum,zero\n")
             if axes and 'wght' in axes:
-                f.write(f"UT = wght {axes['wght']['min']}\n")
-                f.write(f"UL = wght {max(axes['wght']['min'], 300)}\n")
-                f.write(f"UR = wght {max(axes['wght']['min'], 400)}\n")
-                f.write(f"UM = wght {max(axes['wght']['min'], 500)}\n")
-                f.write(f"USB = wght {max(axes['wght']['min'], 600)}\n")
-                f.write(f"UB = wght {max(axes['wght']['min'], 700)}\n")
-                f.write(f"UEB = wght {min(axes['wght']['max'], 800)}\n")
-                f.write(f"UBL = wght {min(axes['wght']['max'], 900)}\n")
+                min_wght = axes['wght']['min']
+                max_wght = axes['wght']['max']
+                
+                weights = {
+                    'UT': 100, 'UEL': 200, 'UL': 300, 'UR': 400, 'UM': 500,
+                    'USB': 600, 'UB': 700, 'UEB': 800, 'UBL': 900
+                }
+
+                for style, value in weights.items():
+                    if value < min_wght:
+                        f.write(f"{style} = wght {min_wght}\n")
+                    elif value > max_wght:
+                        f.write(f"{style} = wght {max_wght}\n")
+                    else:
+                        f.write(f"{style} = wght {value}\n")
+
             f.write(f"\n### {font_family_name}\n")
 
     else:
