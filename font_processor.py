@@ -9,6 +9,33 @@ from pyunpack import Archive
 from fontTools import ttLib
 from fontpreview import FontBanner, FontWall, FontPage
 
+def is_variable_font(font_path):
+    """
+    Checks if a font is a variable font by inspecting its tables using ttx.
+
+    Args:
+        font_path (str): The path to the font file.
+
+    Returns:
+        bool: True if the font is a variable font, False otherwise.
+    """
+    try:
+        # Run ttx to dump the font tables to stdout
+        result = subprocess.run(
+            ['ttx', '-l', font_path],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        # Check if 'fvar' table exists in the output
+        return 'fvar' in result.stdout
+    except FileNotFoundError:
+        print("Error: 'ttx' command not found. Make sure AFDKO is installed and in your PATH.")
+        return False
+    except subprocess.CalledProcessError as e:
+        print(f"Error processing font with ttx: {e}")
+        return False
+
 # --- Configuration ---
 
 # Supported font extensions
@@ -564,19 +591,36 @@ def create_module(font_path):
         raise Exception("No font files found in the provided path or archive.")
 
     print(f"Found {len(font_list)} font file(s).")
-    # Create the initial list of OMF font styles to be filled
-    flist = def_orig_flist(TEMPLATE["all_fonts"])
-    
-    # Match found fonts to the OMF font styles
-    for i, (style, _) in enumerate(flist):
-        found_font = find_font(font_list, style)
-        if found_font:
-            flist[i][1] = found_font
 
-    # Clean the template's font directory before copying new fonts
-    wipe_files(TEMPLATE["fonts_dir"])
-    # Copy the matched fonts into the template's font directory
-    paste_to_template(flist, TEMPLATE["fonts_dir"])
+    # Check if the font is a variable font
+    if is_variable_font(font_list[0]):
+        print("Variable font detected.")
+        # For variable fonts, copy the font to the fonts directory
+        # and create a config.cfg file
+        wipe_files(TEMPLATE["fonts_dir"])
+        shutil.copy(font_list[0], TEMPLATE["fonts_dir"])
+        
+        # Create config.cfg
+        config_path = os.path.join(TEMPLATE["dir"], "config.cfg")
+        with open(config_path, "w") as f:
+            f.write("LSC=true\n")
+            f.write("OTL=tnum,ss01,ss02,ss03,ss04,ss05,ss06,ss07,ss08,ss09,ss10,ss11,ss12,ss13,ss14,ss15,ss16,ss17,ss18,ss19,ss20,calt,case,dlig,frac,hlig,kern,liga,lnum,onum,ordn,pnum,salt,smcp,sups,tnum,zero\n")
+
+    else:
+        print("Static font detected.")
+        # Create the initial list of OMF font styles to be filled
+        flist = def_orig_flist(TEMPLATE["all_fonts"])
+        
+        # Match found fonts to the OMF font styles
+        for i, (style, _) in enumerate(flist):
+            found_font = find_font(font_list, style)
+            if found_font:
+                flist[i][1] = found_font
+
+        # Clean the template's font directory before copying new fonts
+        wipe_files(TEMPLATE["fonts_dir"])
+        # Copy the matched fonts into the template's font directory
+        paste_to_template(flist, TEMPLATE["fonts_dir"])
 
     # Process the fonts in the template directory (e.g., adjust metrics)
     process_fonts_in_dir(TEMPLATE["fonts_dir"])
@@ -606,3 +650,4 @@ def create_module(font_path):
     
     # Return the list of processed fonts (useful for preview generation)
     return font_list
+
