@@ -1,6 +1,9 @@
 import fnmatch
 import os
 import shutil
+import requests
+import zipfile
+import io
 from pyunpack import Archive
 from fontTools import ttLib
 from fontpreview import FontBanner, FontWall, FontPage
@@ -229,6 +232,63 @@ def initialize():
     create_dir("temp_font_dir")
     wipe_files(TEMPLATE["fonts_dir"])
     wipe_files("temp_font_dir")
+
+def check_and_update_omf_template():
+    """Checks for a new OMF template version and updates if available."""
+    local_version = ""
+    remote_version = ""
+    
+    # Read local version
+    local_module_prop_path = os.path.join(TEMPLATE["dir"], "module.prop")
+    if os.path.exists(local_module_prop_path):
+        with open(local_module_prop_path, "r") as f:
+            for line in f:
+                if line.startswith("omfversion="):
+                    local_version = line.split("=")[1].strip()
+                    break
+    
+    print(f"Local OMF template version: {local_version if local_version else 'Not found'}")
+
+    # Fetch remote version
+    remote_module_prop_url = "https://gitlab.com/nongthaihoang/omftemplate/-/raw/master/module.prop?ref_type=heads"
+    temp_clone_dir = "temp_omf_clone"
+    remote_version = ""
+
+    try:
+        response = requests.get(remote_module_prop_url)
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        for line in response.text.splitlines():
+            if line.startswith("omfversion="):
+                remote_version = line.split("=")[1].strip()
+                break
+        print(f"Remote OMF template version: {remote_version if remote_version else 'Not found'}")
+
+        if remote_version and (not local_version or remote_version > local_version):
+            print("New OMF template version available. Updating...")
+            # Remove old template
+            if os.path.exists(TEMPLATE["dir"]):
+                shutil.rmtree(TEMPLATE["dir"])
+                print("Old OMF template removed.")
+
+            # Clone the repository and copy new template
+            print(f"Cloning omftemplate to {temp_clone_dir}...")
+            os.system(f"git clone https://gitlab.com/nongthaihoang/omftemplate.git {temp_clone_dir}")
+            
+            # Copy new template from cloned repo
+            shutil.copytree(temp_clone_dir, TEMPLATE["dir"], dirs_exist_ok=True) # Use dirs_exist_ok for Python 3.8+
+            print("OMF template updated successfully.")
+        else:
+            print("OMF template is up to date.")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching remote OMF template version: {e}")
+    except Exception as e:
+        print(f"Error during OMF template update: {e}")
+    finally:
+        # Clean up the cloned repository
+        if os.path.exists(temp_clone_dir):
+            shutil.rmtree(temp_clone_dir)
+            print("Cleaned up temporary clone directory.")
 
 def clear_temp_folders():
     """Clears temporary folders."""

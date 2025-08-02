@@ -4,6 +4,7 @@ import font_processor as fp
 def main():
     """Main function to run the interactive script."""
     fp.initialize()
+    fp.check_and_update_omf_template()
 
     print("--- Interactive Font Module Script ---")
 

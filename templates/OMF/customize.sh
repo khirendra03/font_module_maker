@@ -1,11 +1,11 @@
-. $MODPATH/ohmyfont.sh
+. ${SH:=$MODPATH/ohmyfont}
 
 ### INSTALLATION ###
 
 ui_print '- Installing'
 
 ui_print '+ Prepare'
-prep; $FB
+prep
 
 ui_print '+ Configure'
 config
@@ -18,5 +18,7 @@ src
 ui_print '+ Rom'
 rom
 
-bold
+ui_print '- Finalizing'
+fontspoof
+svc
 finish

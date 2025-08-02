@@ -1,6 +1,7 @@
-id=Magifonts_omf_font_module
-name=Linotte
-Moduleversion=v2021.05.23
-versionCode=2021052301
-author=nongthaihoang @GitLab; MFFM; @TheSc1enceGuy
-description=OMF Advanced font installer for Android. Module prepared by @magifont_bot. Join @MFFMDisc / @Magifonts_Support for more.
+id=omftemplate
+name=Oh My Font Template
+version=00
+versionCode=00
+omfversion=2025011401
+author=nongthaihoang @ GitLab
+description=Magisk font module template.

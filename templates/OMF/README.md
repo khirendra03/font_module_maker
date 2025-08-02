@@ -1,7 +1,6 @@
 # Oh My Font Template
-**v2021.10.26**
-- A powerful font module template for [Magisk](https://github.com/topjohnwu/Magisk). Powered by [OMF](https://gitlab.com/nongthaihoang/oh_my_font).
-- The template includes many useful variables and functions. It is designed intended mostly for font module makers and developers.
+- An advanced font module template for [Magisk](https://github.com/topjohnwu/Magisk). Powered by [OMF](https://gitlab.com/nongthaihoang/oh_my_font).
+- The template includes many useful variables and functions. It is designed intended mostly for font module creators.
 - The template alone does nothing. You have to write your own code to make it works.
 - Clone/download the repo and edit the `customize.sh`.
 
@@ -76,11 +75,11 @@
 **`fallback`**
   - Make a font family fallback.  
   - Usage: `fallback [font_family]`  
-      If no argument is provided, the font family will be `sans-serif` by default.  
+    If no argument is provided, the font family will be `sans-serif` by default.  
   - E.g.  
-      `fallback`  
-      `fallback serif`  
-      It recommends to call the variable `$FB` which is a shortcut for this function. `$FB` will be empty if the fontxml is already patched (i.e. Oxygen 11).
+    `fallback`  
+    `fallback serif`  
+    It recommends to call the variable `$FB` which is a shortcut for this function. `$FB` will be empty if the fontxml is already patched (i.e. Oxygen 11).
 
 **`prep`** (prepare)
   - Copy the original fontxml `$ORIFONTXML` to module path `$SYSFONTXML` and check if it is patched. This is usually the first function you want to call.  
@@ -91,24 +90,24 @@
   - `font_family`: `sans-serif`, `serif`, `monospace`, etc  
   - `font_name`: Regular.ttf, Medium.ttf, MyFontName.ttf  
   - `font_style` (from Thin to Black)
-    - Uprights: `t`, `el`, `l`, `r`, `m`, `sb`, `b`, `eb`, `bl`  
-    - Italics: `ti`, `eli`, `li`, `ri`, `mi`, `sbi`, `bi`, `ebi`, `bli`  
+  - Uprights: `t`, `el`, `l`, `r`, `m`, `sb`, `b`, `eb`, `bl`  
+  - Italics: `ti`, `eli`, `li`, `ri`, `mi`, `sbi`, `bi`, `ebi`, `bli`  
   - `axis`: wdth, wght, slnt, opsz, etc.
   - `value`: value corresponds to each `axis`
   - E.g.  
-      `font sans-serif MyFont-Regular.ttf r`  
-      `font serif MyFont-Bold.ttf b`  
-      `font sans-serif AnyFont-VF.ttf bl wght 900 width 100`  
+    `font sans-serif MyFont-Regular.ttf r`  
+    `font serif MyFont-Bold.ttf b`  
+    `font sans-serif AnyFont-VF.ttf bl wght 900 width 100`  
 
 **`mksty`** (make style)
   - Edit fontxml to add more font styles for a family. Only usefull if your font has more weights than default.  
   - Usage: `mksty [font_family] <max_weight> [min_weight]`  
-      without any arguments, `font_family` will be `sans-serif` and `max_weigt` is 9 by default.
+    without any arguments, `font_family` will be `sans-serif` and `max_weigt` is 9 by default.
   - E.g.  
-      `mksty`  
-      will make 9 weights for `sans-serif` - both uprights and italics (18 styles). Use this if your font has full weights.  
-      `mksty $SC 9`  
-      does the same thing but for `sans-serif-condensed` family
+    `mksty`  
+    will make 9 weights for `sans-serif` - both uprights and italics (18 styles). Use this if your font has full weights.  
+    `mksty $SC 9`  
+    does the same thing but for `sans-serif-condensed` family
 
 **`finish`**
   - Remove all unnecessary files except folder `system` and file `module.prop`, correct permissions. Run it as the last function.  
@@ -122,89 +121,228 @@
   - E.g. `MyVar=$(valof MyVar)`
 
 **`rom`**
-  - Try to make the module work system-wide on a ROMs that already uses custom fonts by default. This function is only made for font family `sans-serif`. Do NOT use it if changing any other font families. Call this function before `finish`.  
+  - Try to make the module work system-wide on a ROMs that already uses custom fonts by default. This function is only made for the `sans-serif` font family. Do NOT use it if changing any other font families. Call this function before `finish`.  
 
 **`install_font`**
-  - You need at least one `Regular.ttf` for static font or one variable font in folder `fonts` `$FONTS` to use this function. It will install font family `sans-serif` and `sans-serif-condensed`. 
+  - The main font installation fuction to install 4 main font families.
+
+**`sans`**
+  - The function to install the default `sans-serif` font family.
+  - Usage: `sans <family>`
+  - E.g.  
+    `sans source-sans-pro` will install the default `sans-serif` font for `source-sans-pro` family.  
+    `local XML=$PRDXML; sans rubik; XML=` will install the default `sans-serif` font for `rubik` family in `$PRDXML`
+
+**`serf`**
+  - The function to install the default `serif` font family.
+  - Usage: `serif <family>`
+  - E.g. similar to `sans`
+
+**`mono`**
+  - The function to install the default `monospace` font family.
+  - Usage: `mono <family>`
+  - E.g. similar to `sans`
+
+**`srmo`**
+  - The function to install the default `serif-monospace` font family.
+  - Usage: `srmo <family>`
+  - E.g. similar to `sans`
 
 **`bold`**
   - A font option for `sans-serif` to replace `Regular` style with `Medium` one. It will read the `BOLD` value in the config file. Run this function after `rom`.  
 
+## Options
+| Option | Description |
+| - | - |
+| `SANS=false` | Do not install sans-serif |
+| `SANS=serif` | Replace sans-serif with serif |
+| `SANS=monospace` | Replace sans-serif with monospace |
+| `SANS=serif_monospace` | Replace sans-serif with serif-monospace |
+| `SERF=false` | Do not install serif |
+| `SERF=sans_serif` | Replace serif with sans-serif |
+| `SERF=monospace` | Replace serif with monospace |
+| `SERF=serif_monospace` | Replace serif with serif-monospace |
+| `MONO=false` | Do not install monospace |
+| `MONO=serif_monospace` | Replace monospace with serif-monospace |
+| `SRMO=false` | Do not install serif-monospace |
+| `SRMO=monospace` | Replace serif-monospace with monospace |
+
 ## How to use
-For people who don't know where to start:
+You can now write your own code by using the functions above. Or use the built-in functions to install custom fonts automatically.
+1. Put your fonts into the `fonts` folder and name them as below:
+  - Static Fonts
+    - **`sans-serif`**:
+      ```
+      Black.ttf            or ubl.ttf
+      ExtraBold.ttf        or ueb.ttf
+      Bold.ttf             or ub.ttf
+      SemiBold.ttf         or usb.ttf
+      Medium.ttf           or um.ttf
+      Regular.ttf          or ur.ttf
+      Light.ttf            or ul.ttf
+      ExtraLight.ttf       or uel.ttf
+      Thin.ttf             or ut.ttf
+  
+      BlackItalic.ttf      or ibl.ttf
+      ExtraBoldItalic.ttf  or ieb.ttf
+      BoldItalic.ttf       or ib.ttf
+      SemiBoldItalic.ttf   or isb.ttf
+      MediumItalic.ttf     or im.ttf
+      Italic.ttf           or ir.ttf
+      LightItalic.ttf      or il.ttf
+      ExtraLightItalic.ttf or iel.ttf
+      ThinItalic.ttf       or it.ttf
+  
+      Condensed-Black.ttf            or cbl.ttf
+      Condensed-ExtraBold.ttf        or ceb.ttf
+      Condensed-Bold.ttf             or cb.ttf
+      Condensed-SemiBold.ttf         or csb.ttf
+      Condensed-Medium.ttf           or cm.ttf
+      Condensed-Regular.ttf          or cr.ttf
+      Condensed-Light.ttf            or cl.ttf
+      Condensed-ExtraLight.ttf       or cel.ttf
+      Condensed-Thin.ttf             or ct.ttf
+  
+      Condensed-BlackItalic.ttf      or dbl.ttf
+      Condensed-ExtraBoldItalic.ttf  or deb.ttf
+      Condensed-BoldItalic.ttf       or db.ttf
+      Condensed-SemiBoldItalic.ttf   or dsb.ttf
+      Condensed-MediumItalic.ttf     or dm.ttf
+      Condensed-Italic.ttf           or dr.ttf
+      Condensed-LightItalic.ttf      or dl.ttf
+      Condensed-ExtraLightItalic.ttf or del.ttf
+      Condensed-ThinItalic.ttf       or dt.ttf
+      ```
+    - **`monospace`**:
+      ```
+      Mono-Black.ttf            or mbl.ttf
+      Mono-ExtraBold.ttf        or meb.ttf
+      Mono-Bold.ttf             or mb.ttf
+      Mono-SemiBold.ttf         or msb.ttf
+      Mono-Medium.ttf           or mm.ttf
+      Mono-Regular.ttf          or mr.ttf
+      Mono-Light.ttf            or ml.ttf
+      Mono-ExtraLight.ttf       or mel.ttf
+      Mono-Thin.ttf             or mt.ttf
+  
+      Mono-BlackItalic.ttf      or nbl.ttf
+      Mono-ExtraBoldItalic.ttf  or neb.ttf
+      Mono-BoldItalic.ttf       or nb.ttf
+      Mono-SemiBoldItalic.ttf   or nsb.ttf
+      Mono-MediumItalic.ttf     or nm.ttf
+      Mono-Italic.ttf           or nr.ttf
+      Mono-LightItalic.ttf      or nl.ttf
+      Mono-ExtraLightItalic.ttf or nel.ttf
+      Mono-ThinItalic.ttf       or nt.ttf
+      ```
+    - **`serif`**:
+      ```
+      Serif-Black.ttf            or sbl.ttf
+      Serif-ExtraBold.ttf        or seb.ttf
+      Serif-Bold.ttf             or sb.ttf
+      Serif-SemiBold.ttf         or ssb.ttf
+      Serif-Medium.ttf           or sm.ttf
+      Serif-Regular.ttf          or sr.ttf
+      Serif-Light.ttf            or sl.ttf
+      Serif-ExtraLight.ttf       or sel.ttf
+      Serif-Thin.ttf             or st.ttf
+  
+      Serif-BlackItalic.ttf      or tbl.ttf
+      Serif-ExtraBoldItalic.ttf  or teb.ttf
+      Serif-BoldItalic.ttf       or tb.ttf
+      Serif-SemiBoldItalic.ttf   or tsb.ttf
+      Serif-MediumItalic.ttf     or tm.ttf
+      Serif-Italic.ttf           or tr.ttf
+      Serif-LightItalic.ttf      or tl.ttf
+      Serif-ExtraLightItalic.ttf or tel.ttf
+      Serif-ThinItalic.ttf       or tt.ttf
+      ```
+    - **`serif-monospace`**:
+      ```
+      SerifMono-Black.ttf            or obl.ttf
+      SerifMono-ExtraBold.ttf        or oeb.ttf
+      SerifMono-Bold.ttf             or ob.ttf
+      SerifMono-SemiBold.ttf         or osb.ttf
+      SerifMono-Medium.ttf           or om.ttf
+      SerifMono-Regular.ttf          or or.ttf
+      SerifMono-Light.ttf            or ol.ttf
+      SerifMono-ExtraLight.ttf       or oel.ttf
+      SerifMono-Thin.ttf             or ot.ttf
+  
+      SerifMono-BlackItalic.ttf      or pbl.ttf
+      SerifMono-ExtraBoldItalic.ttf  or peb.ttf
+      SerifMono-BoldItalic.ttf       or pb.ttf
+      SerifMono-SemiBoldItalic.ttf   or psb.ttf
+      SerifMono-MediumItalic.ttf     or pm.ttf
+      SerifMono-Italic.ttf           or pr.ttf
+      SerifMono-LightItalic.ttf      or pl.ttf
+      SerifMono-ExtraLightItalic.ttf or pel.ttf
+      SerifMono-ThinItalic.ttf       or pt.ttf
+      ```
+  - Variable Fonts (VF)  
+    At the bottom of the config file (config.cfg), you will see many empty variables. Uncomment and assign values for them:
+    - **`sans-serif`**:
+      ```
+      SS=<upright_font>
+      e.g. SS=MyFont.ttf
+      SSI=<italic_font>
+      e.g. SSI=MyFont-Italic.ttf
+      ```
+    - **`monospace`**:
+      ```
+      MS=<upright_font>
+      e.g. MS=MyFontMono.ttf
+      MSI=<italic_font>
+      e.g. MSI=MyFontMono-Italic.ttf
+      ```
+    - **`serif`**:
+      ```
+      SER=<upright_font>
+      e.g. SER=MyFontSerif.ttf
+      SERI=<italic_font>
+      e.g. SERI=MyFontSerif-Italic.ttf
+      ```
+    - **`serif-monospace`**:
+      ```
+      SRM=<upright_font>
+      e.g. SER=MyFontSerifMono.ttf
+      SRMI=<italic_font>
+      e.g. SRMI=MyFontSerifMono-Italic.ttf
+      ```
+2. (Only for VF) Configuring axes follows this diagram:
+  ```
+  U, I, C, D are 4 styles of sans-serif
 
-### Static fonts
-- Put your fonts into `fonts` folder. Rename them as below:  
-    - **sans-serif**:
-        ```
-        BlackItalic.ttf      or bli.ttf
-        Black.ttf            or bl.ttf
-        ExtraBoldItalic.ttf  or ebi.ttf
-        ExtraBold.ttf        or eb.ttf
-        BoldItalic.ttf       or bi.ttf
-        Bold.ttf             or b.ttf
-        SemiBoldItalic.ttf   or sbi.ttf
-        SemiBold.ttf         or sb.ttf
-        MediumItalic.ttf     or mi.ttf
-        Medium.ttf           or m.ttf
-        Italic.ttf           or i.ttf
-        Regular.ttf          or r.ttf
-        LightItalic.ttf      or li.ttf
-        Light.ttf            or l.ttf
-        ExtraLightItalic.ttf or eli.ttf
-        ExtraLight.ttf       or el.ttf
-        ThinItalic.ttf       or ti.ttf
-        Thin.ttf             or t.ttf
-        
-        Condensed-BlackItalic.ttf.ttf  or cbli.ttf
-        Condensed-Black.ttf            or cbl.ttf
-        Condensed-ExtraBoldItalic.ttf  or cebi.ttf
-        Condensed-ExtraBold.ttf        or ceb.ttf
-        Condensed-BoldItalic.ttf       or cbi.ttf
-        Condensed-Bold.ttf             or cb.ttf
-        Condensed-SemiBoldItalic.ttf   or csbi.ttf
-        Condensed-SemiBold.ttf         or csb.ttf
-        Condensed-MediumItalic.ttf     or cmi.ttf
-        Condensed-Medium.ttf           or cm.ttf
-        Condensed-Italic.ttf           or ci.ttf
-        Condensed-Regular.ttf          or cr.ttf
-        Condensed-LightItalic.ttf      or cli.ttf
-        Condensed-Light.ttf            or cl.ttf
-        Condensed-ExtraLightItalic.ttf or celi.ttf
-        Condensed-ExtraLight.ttf       or cel.ttf
-        Condensed-ThinItalic.ttf       or cti.ttf
-        Condensed-Thin.ttf             or ct.ttf
-        ```
-    - **monospace**: `Mono.ttf` or `mo.ttf`
-    - There must be at least one font `Regular.ttf` or `r.ttf`, the rest are optional.  
-- Add the following line to the bottom of the `customize.sh` script (or just uncomment them):  
-    ```
-    prep; $FB; config; install_font; src; rom; bold; finish
-    ```
+                          Weights
+                    +-----------------+
+       Fonts        | T  | Thin       |
+  +---------------+ | EL | ExtraLight |
+  | U | Upright   | | L  | Light      |
+  | I | Italic    | | R  | Regular    |
+  | C | Condensed | | M  | Medium     |
+  | D | CI        | | SB | SemiBold   |
+  | M | Monospace | | B  | Bold       |
+  | S | Serif     | | EB | ExtraBold  |
+  | O | SM        | | BL | Black      |
+  +---------------+ +-----------------+
+     |                 |
+     |       +---------+
+     |       |
+   ------ -------
+   <font><weight>
+   -------------- 
+         |
+      +--+
+      |
+   -------
+   <style> = [<axis> <value> ...]
 
-### Variable fonts (VF)
-- Usually you'll need two fonts, one for **upright** and the other for **italic**.  
-    - Open the config file, at the bottom, set `SS=<upright_font_name>` (e.g. `SS=MyFont-VF.ttf`) and `SSI=<italic_font_name>` (e.g. `SSI=MyFontItalic-VF.ttf`).  
-    - If there is only one upright font, just leave the `SSI` empty.
-    - Copy your fonts to the folder `fonts`.
-- In the config file, set each font style from Thin to Black, from Upright to Condensed with desired axes and values. E.g.
-    ```
-    ...
-    UR  = wght 400
-    UBL = wght 900
-    ...
-    ISB = wght 600 slnt 1
-    IL  = wght 300 slnt 1
-    ...
-    CM  = wght 500 wdth 75
-    CT  = wght 100 wdth 75
-    ...
-    DEB = wght 800 wdth 75 slnt 1
-    ...
-    ```
-    - If you have only upright font, just set upright font styles, leave other font styles (i.e. italics, condensed). They will take the value from upright if needed.
-    - Only set font styles that your fonts actually support and do not set the same value for different font styles (e.g.  `UT = wght 400` `UR = wgth 400`).
-- The final step is the same as for static fonts.
+  e.g   UR = wght 400
+        UB = wght 700
+  ```
+3. Open the `customize.sh`, uncomment the commented codes.
+### Note
+- For each font family, there must be at least one Regular font, the rest are optional.
 
 ## Support
-- [XDA](https://forum.xda-developers.com/t/module-oh-my-font-improve-android-typography.4215515)
+- [Telegram](https://t.me/ohmyfont)
