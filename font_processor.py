@@ -11,14 +11,18 @@ from fontpreview import FontBanner, FontWall, FontPage
 
 # --- Configuration ---
 
+# Supported font extensions
 FONT_EXT = ("ttf", "otf")
+# Supported archive extensions for font zips
 ZIP_EXT = ("zip", "7z", "rar")
+# Original working directory of the script
 ORIG_DIR = os.getcwd()
 
-# Template details
+# Details for the OMF (Oh My Font) template
 TEMPLATE = {
-    "dir": "templates/OMF",
-    "fonts_dir": "templates/OMF/fonts",
+    "dir": "templates/OMF",  # Base directory of the OMF template
+    "fonts_dir": "templates/OMF/fonts",  # Directory within the template where fonts are placed
+    # List of all expected font styles in the OMF template, named according to OMF conventions
     "all_fonts": [
         "ubl.ttf", "ueb.ttf", "ub.ttf", "usb.ttf", "um.ttf", "ur.ttf", "ul.ttf", "uel.ttf", "ut.ttf",
         "ibl.ttf", "ieb.ttf", "ib.ttf", "isb.ttf", "im.ttf", "ir.ttf", "il.ttf", "iel.ttf", "it.ttf",
@@ -31,12 +35,19 @@ TEMPLATE = {
         "obl.ttf", "oeb.ttf", "ob.ttf", "osb.ttf", "om.ttf", "or.ttf", "ol.ttf", "oel.ttf", "ot.ttf",
         "pbl.ttf", "peb.ttf", "pb.ttf", "psb.ttf", "pm.ttf", "pr.ttf", "pl.ttf", "pel.ttf", "pt.ttf"
     ],
+    # A placeholder for single font files, though 'all_fonts' is primarily used for mapping
     "single_file": ["Regular.ttf"]
 }
 
 
 def process_fonts_in_dir(fontdir):
-    """Processes all fonts in a given directory."""
+    """
+    Processes all font files (.ttf, .otf) in a given directory.
+    This function applies basic metric adjustments to the fonts to ensure better compatibility
+    and display on Android systems, specifically targeting common `unitsPerEm` values.
+    It also handles potential errors during font opening and saving.
+    """
+    # Find all TTF and OTF font files in the specified directory
     fonts_to_process = find("*.ttf", fontdir)
     if not fonts_to_process:
         fonts_to_process = find("*.otf", fontdir)
@@ -44,8 +55,11 @@ def process_fonts_in_dir(fontdir):
     print(f"Processing {len(fonts_to_process)} fonts...")
     for font_path in fonts_to_process:
         try:
+            # Open the font file using fontTools
             tt = ttLib.TTFont(font_path)
-            # Basic metric adjustments (can be expanded)
+            
+            # Apply basic metric adjustments based on unitsPerEm
+            # These adjustments help in consistent font rendering across devices
             if tt["head"].unitsPerEm == 2048:
                 tt["hhea"].ascent = 1900
                 tt["OS/2"].sTypoAscender = 1900
@@ -57,22 +71,33 @@ def process_fonts_in_dir(fontdir):
                 tt["hhea"].descent = -270
                 tt["OS/2"].sTypoDescender = -270
             
+            # Set line gap to 0 for consistent line spacing
             tt["hhea"].lineGap = 0
             tt["OS/2"].sTypoLineGap = 0
             
             try:
+                # Save the modified font file
                 tt.save(font_path)
                 # print(f"  - Fixed metrics for: {os.path.basename(font_path)}")
             except Exception as save_e:
                 print(f"Warning: Could not save font {os.path.basename(font_path)}. Reason: {save_e}")
         except ttLib.TTLibError as e:
+            # Catch errors specific to font file corruption or unsupported formats
             print(f"Warning: Could not open font {os.path.basename(font_path)}. It might be corrupted or an unsupported format. Reason: {e}")
         except Exception as e:
+            # Catch any other unexpected errors during font processing
             print(f"Warning: An unexpected error occurred while processing font {os.path.basename(font_path)}. Reason: {e}")
 
 
 def generate_preview(font_path):
-    """Generates a preview image for a given font."""
+    """
+    Generates a preview image for a given font file.
+    The preview includes the font's name and a sample text string.
+    The generated image is saved in the 'preview' directory.
+
+    Args:
+        font_path (str): The absolute path to the font file (.ttf or .otf) for which to generate a preview.
+    """
     if not os.path.exists(font_path):
         print(f"Error: Font file not found at '{font_path}'")
         return
@@ -83,6 +108,7 @@ def generate_preview(font_path):
     preview_img_path = os.path.join("preview", remove_ext(filename) + ".png")
 
     try:
+        # Attempt to open the font and get its name for the preview text
         try:
             font_tt = ttLib.TTFont(font_path)
             font_name = short_name(font_tt)[1] or "Font"
@@ -93,14 +119,19 @@ def generate_preview(font_path):
             print(f"Error: An unexpected error occurred while reading font {os.path.basename(font_path)} for preview. Reason: {e}")
             return
         
+        # Create a FontBanner object for the preview image
         try:
             fb = FontBanner(font_path, 'landscape')
+            # Set the text to display in the preview, including the font's family name
             fb.font_text = f'{font_name}\nAa Bb Cc Dd Ee Ff Gg\n1234567890'
+            # Set background and foreground colors
             fb.bg_color = (20, 20, 20)
             fb.fg_color = (230, 230, 230)
+            # Adjust font size and text position
             fb.set_font_size(80)
             fb.set_text_position('center')
             
+            # Create a FontWall to draw and save the banner
             fw = FontWall([fb], 1, mode="horizontal")
             fw.draw(1)
             fw.save(preview_img_path)
@@ -115,13 +146,25 @@ def generate_preview(font_path):
 # --- Utility Functions ---
 
 def extract(file, location):
-    """Extracts an archive to a given location."""
-    create_dir(location)
+    """
+    Extracts an archive file to a specified location.
+    Supports .zip, .7z, and .rar formats.
+
+    Args:
+        file (str): The path to the archive file.
+        location (str): The directory where the archive contents should be extracted.
+
+    Returns:
+        bool: True if extraction is successful, False otherwise.
+    """
+    create_dir(location)  # Ensure the destination directory exists
     print(f"Extracting {os.path.basename(file)} to {location}...")
     try:
+        # Handle .7z files specifically using shutil.unpack_archive if available
         if file.lower().endswith(".7z"):
             shutil.unpack_archive(file, location)
         else:
+            # Use pyunpack for other archive types (zip, rar)
             Archive(file).extractall(location)
         print("Extraction successful.")
         return True
@@ -132,7 +175,16 @@ def extract(file, location):
 
 
 def find(pattern, path):
-    """Finds files matching a pattern in a directory."""
+    """
+    Finds files matching a given glob-style pattern within a specified directory and its subdirectories.
+
+    Args:
+        pattern (str): The glob pattern to match (e.g., "*.ttf", "*.otf").
+        path (str): The directory to start the search from.
+
+    Returns:
+        list: A list of absolute paths to files that match the pattern.
+    """
     result = []
     for root, _, files in os.walk(path):
         for name in files:
@@ -234,30 +286,55 @@ def find_font(font_list, style):
 
 
 def short_name(font):
-    """Gets the short name from a font's names table."""
+    """
+    Extracts the full font name and family name from a font's 'name' table.
+
+    Args:
+        font (fontTools.ttLib.TTFont): The TTFont object to extract names from.
+
+    Returns:
+        tuple: A tuple containing (full_font_name, font_family_name).
+               Returns empty strings if names are not found.
+    """
     name = ""
     family = ""
     for record in font['name'].names:
         try:
+            # Decode the string based on its encoding
             if b'\x00' in record.string:
                 name_str = record.string.decode('utf-16-be')
             else:
                 name_str = record.string.decode('latin-1')
             
-            if record.nameID == 4 and not name: # Full font name
+            # NameID 4 is typically the full font name
+            if record.nameID == 4 and not name:
                 name = name_str
-            elif record.nameID == 1 and not family: # Font family
+            # NameID 1 is typically the font family name
+            elif record.nameID == 1 and not family:
                 family = name_str
+            
+            # If both names are found, we can stop searching
             if name and family:
                 break
         except:
+            # Ignore decoding errors for specific name records
             continue
     return (name, family)
 
 
 def paste_to_template(flist, dest_dir):
-    """Copies found fonts to the template directory."""
+    """
+    Copies the identified font files to the template's font directory.
+    If a specific font style is missing, it attempts to fill it with the 'regular' font
+    to ensure the module is complete.
+
+    Args:
+        flist (list): A list of tuples, where each tuple contains (font_style_name, font_path).
+                      font_path is None if the style was not found.
+        dest_dir (str): The destination directory within the template where fonts should be copied.
+    """
     print("Copying fonts to template...")
+    # Copy found fonts to their respective places in the template
     for font_style, font_path in flist:
         if font_path:
             dest_path = os.path.join(dest_dir, font_style + ".ttf")
@@ -269,10 +346,10 @@ def paste_to_template(flist, dest_dir):
                 print(f"Error copying {os.path.basename(font_path)} to {os.path.basename(dest_path)}: {e}")
                 raise Exception(f"Failed to copy font file: {os.path.basename(font_path)}")
 
-    # Fill missing fonts with regular
-    regular_font_path = return_font(flist, "ur")
+    # Attempt to fill any missing font styles with the 'regular' font
+    regular_font_path = return_font(flist, "ur") # 'ur' is the OMF short name for Regular
     if not regular_font_path:
-        # If no regular, use the first available font
+        # If no specific 'regular' font was found, try to use the first available font as a fallback
         for _, fp in flist:
             if fp:
                 regular_font_path = fp
@@ -280,7 +357,7 @@ def paste_to_template(flist, dest_dir):
     
     if regular_font_path:
         for font_style, font_path in flist:
-            if not font_path:
+            if not font_path: # If a font style is missing
                 dest_path = os.path.join(dest_dir, font_style + ".ttf")
                 try:
                     shutil.copy(regular_font_path, dest_path)
@@ -291,29 +368,67 @@ def paste_to_template(flist, dest_dir):
 
 
 def def_orig_flist(all_fonts):
-    """Creates the initial font list structure."""
+    """
+    Creates the initial font list structure based on the expected OMF font styles.
+    Each entry in the list will be a [style_name, font_path] pair, initially with font_path as False.
+
+    Args:
+        all_fonts (list): A list of all expected font filenames from the OMF template.
+
+    Returns:
+        list: A list of lists, e.g., [["ur", False], ["ub", False], ...]
+    """
     return [[remove_ext(i), False] for i in all_fonts]
 
 def return_font(array, value):
-    """Returns a font path from the list based on style."""
+    """
+    Searches a list of [style_name, font_path] pairs and returns the font_path
+    for a given style_name.
+
+    Args:
+        array (list): The list of [style_name, font_path] pairs.
+        value (str): The style_name to search for.
+
+    Returns:
+        str or None: The font_path if found, otherwise None.
+    """
     for style, path in array:
         if style == value:
             return path
     return None
 
 def remove_ext(file_with_ext):
-    """Removes the extension from a filename."""
+    """
+    Removes the file extension from a given filename.
+
+    Args:
+        file_with_ext (str): The filename including its extension.
+
+    Returns:
+        str: The filename without the extension.
+    """
     return os.path.splitext(file_with_ext)[0]
 
 
 def create_dir(folder):
-    """Creates a directory if it doesn't exist."""
+    """
+    Creates a directory if it does not already exist.
+
+    Args:
+        folder (str): The path to the directory to create.
+    """
     if not os.path.exists(folder):
         os.makedirs(folder)
 
 
 def wipe_files(path_to_folder):
-    """Deletes all files and subdirectories in a folder."""
+    """
+    Deletes all files and subdirectories within a specified folder.
+    This is used for cleaning temporary directories.
+
+    Args:
+        path_to_folder (str): The path to the folder to clean.
+    """
     if not os.path.exists(path_to_folder):
         return
     for filename in os.listdir(path_to_folder):
@@ -327,20 +442,28 @@ def wipe_files(path_to_folder):
             print(f'Failed to delete {file_path}. Reason: {e}')
 
 def initialize():
-    """Initializes the script environment."""
+    """
+    Initializes the script environment by creating necessary output and temporary directories
+    and cleaning up any residual files from previous runs.
+    """
     print("Initializing...")
     create_dir("output")
     create_dir("preview")
     create_dir("temp_font_dir")
+    # Clean up template's font directory and temporary font directory
     wipe_files(TEMPLATE["fonts_dir"])
     wipe_files("temp_font_dir")
 
 def check_and_update_omf_template():
-    """Checks for a new OMF template version and updates if available."""
+    """
+    Checks for a new OMF template version from a remote GitLab repository.
+    If a newer version is available, it downloads and updates the local template.
+    This ensures the script always uses the latest template for module creation.
+    """
     local_version = ""
     remote_version = ""
     
-    # Read local version
+    # Read local OMF template version from module.prop
     local_module_prop_path = os.path.join(TEMPLATE["dir"], "module.prop")
     if os.path.exists(local_module_prop_path):
         with open(local_module_prop_path, "r") as f:
@@ -351,28 +474,29 @@ def check_and_update_omf_template():
     
     print(f"Local OMF template version: {local_version if local_version else 'Not found'}")
 
-    # Fetch remote version
+    # Fetch remote OMF template version from GitLab
     remote_module_prop_url = "https://gitlab.com/nongthaihoang/omftemplate/-/raw/master/module.prop?ref_type=heads"
     temp_clone_dir = "temp_omf_clone"
     remote_version = ""
 
     try:
         response = requests.get(remote_module_prop_url)
-        response.raise_for_status()  # Raise an exception for HTTP errors
+        response.raise_for_status()  # Raise an exception for HTTP errors (e.g., 404, 500)
         for line in response.text.splitlines():
             if line.startswith("omfversion="):
                 remote_version = line.split("=")[1].strip()
                 break
         print(f"Remote OMF template version: {remote_version if remote_version else 'Not found'}")
 
+        # Compare versions and update if remote is newer
         if remote_version and (not local_version or remote_version > local_version):
             print("New OMF template version available. Updating...")
-            # Remove old template
+            # Remove old template directory if it exists
             if os.path.exists(TEMPLATE["dir"]):
                 shutil.rmtree(TEMPLATE["dir"])
                 print("Old OMF template removed.")
 
-            # Clone the repository and copy new template
+            # Clone the omftemplate repository using subprocess for better control
             print(f"Cloning omftemplate to {temp_clone_dir}...")
             try:
                 subprocess.run(['git', 'clone', 'https://gitlab.com/nongthaihoang/omftemplate.git', temp_clone_dir], check=True, capture_output=True, text=True)
@@ -380,8 +504,9 @@ def check_and_update_omf_template():
                 print(f"Error cloning repository: {e.stderr}")
                 return
             
-            # Copy new template from cloned repo
-            shutil.copytree(temp_clone_dir, TEMPLATE["dir"], dirs_exist_ok=True) # Use dirs_exist_ok for Python 3.8+
+            # Copy the new template from the cloned repository to the templates directory
+            # dirs_exist_ok=True is used for Python 3.8+ to allow merging directories
+            shutil.copytree(temp_clone_dir, TEMPLATE["dir"], dirs_exist_ok=True)
             print("OMF template updated successfully.")
         else:
             print("OMF template is up to date.")
@@ -391,63 +516,93 @@ def check_and_update_omf_template():
     except Exception as e:
         print(f"Error during OMF template update: {e}")
     finally:
-        # Clean up the cloned repository
+        # Clean up the temporary cloned repository directory
         if os.path.exists(temp_clone_dir):
             shutil.rmtree(temp_clone_dir)
             print("Cleaned up temporary clone directory.")
 
 def clear_temp_folders():
-    """Clears temporary folders."""
+    """Clears temporary folders used during the module creation process."""
     print("Cleaning up temporary files...")
     wipe_files("temp_font_dir")
 
 def create_module(font_path):
-    """Creates the Magisk font module."""
+    """
+    Main function to create the Magisk font module.
+    It handles extracting fonts from archives, identifying font styles,
+    copying them to the template, processing them, and finally packaging
+    the module into a flashable zip.
+
+    Args:
+        font_path (str): The path to the user's font file (.ttf, .otf) or zip archive.
+
+    Returns:
+        list: A list of paths to the processed font files, or an empty list if no fonts were processed.
+    """
     temp_font_dir = "temp_font_dir"
     font_list = []
 
+    # Determine if the input is a zip archive or a single font file
     if font_path.lower().endswith(ZIP_EXT):
+        # Extract fonts from the zip archive to a temporary directory
         if not extract(font_path, temp_font_dir):
             raise Exception("Failed to extract font archive.")
+        # Find all TTF and OTF files within the extracted directory
         font_list = find("*.ttf", temp_font_dir)
         if not font_list:
             font_list = find("*.otf", temp_font_dir)
     elif font_path.lower().endswith(FONT_EXT):
+        # If it's a single font file, add it directly to the list
         font_list = [font_path]
     else:
+        # Raise an error for unsupported file types
         print(f"Error: Unsupported file type for: {font_path}")
-        return
+        raise Exception(f"Unsupported file type: {os.path.basename(font_path)}")
 
     if not font_list:
-        print("Error: No font files found in the provided path.")
-        return
+        # If no font files were found after processing, raise an error
+        raise Exception("No font files found in the provided path or archive.")
 
     print(f"Found {len(font_list)} font file(s).")
+    # Create the initial list of OMF font styles to be filled
     flist = def_orig_flist(TEMPLATE["all_fonts"])
     
+    # Match found fonts to the OMF font styles
     for i, (style, _) in enumerate(flist):
         found_font = find_font(font_list, style)
         if found_font:
             flist[i][1] = found_font
 
+    # Clean the template's font directory before copying new fonts
     wipe_files(TEMPLATE["fonts_dir"])
+    # Copy the matched fonts into the template's font directory
     paste_to_template(flist, TEMPLATE["fonts_dir"])
 
+    # Process the fonts in the template directory (e.g., adjust metrics)
     process_fonts_in_dir(TEMPLATE["fonts_dir"])
 
+    # Determine the font family name for the output zip file
+    font_family_name = ""
     try:
+        # Try to get the font family name from the first processed font
         font_family_name = short_name(ttLib.TTFont(font_list[0]))[1]
         if not font_family_name or font_family_name.isspace():
+            # Fallback to filename if family name is not available
             font_family_name = remove_ext(os.path.basename(font_list[0]))
     except Exception:
+        # Fallback to filename if any error occurs during font name extraction
         font_family_name = remove_ext(os.path.basename(font_list[0]))
 
+    # Construct the output filename for the Magisk module zip
     output_filename_base = os.path.join("output", f"OMF_{font_family_name.replace(' ', '')}")
     
+    # Package the template directory into a flashable zip file
     try:
         print(f"\nPackaging module to: {output_filename_base}.zip")
         shutil.make_archive(output_filename_base, 'zip', TEMPLATE["dir"])
         print("\nModule created successfully!")
     except Exception as e:
         raise Exception(f"Failed to package module: {e}")
+    
+    # Return the list of processed fonts (useful for preview generation)
     return font_list
