@@ -2,3 +2,4 @@ fontTools
 fontpreview
 patool
 pyunpack
+typer

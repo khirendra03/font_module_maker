@@ -1,0 +1,16 @@
+[project]
+name = "font-module-maker"
+version = "0.1.0"
+description = "Tools to create Magisk-flashable font modules (font_module_maker fork)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fonttools",
+    "fontpreview",
+    "patool",
+    "pyunpack",
+    "typer",
+]
+
+[project.scripts]
+font-module-maker = "cli:app"
